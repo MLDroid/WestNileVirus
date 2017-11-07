@@ -13,6 +13,8 @@ from random import randint
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
 from collections import Counter
 from explainable_svm import svm_explain
+from utils import process_date, convert_species
+from vis import visualize
 
 def run_cv (train,labels,n=5):
     acc = [];p = [];r = []; f = []
@@ -68,24 +70,15 @@ weather = weather.replace('T', -1)
 weather = weather.replace(' T', -1)
 weather = weather.replace('  T', -1)
 
-# Functions to extract month and day from dataset
-# You can also use parse_dates of Pandas.
-def create_month(x):
-    return x.split('-')[1]
+process_date (train,test)
 
-def create_day(x):
-    return x.split('-')[2]
-
-train['month'] = train.Date.apply(create_month)
-train['day'] = train.Date.apply(create_day)
-test['month'] = test.Date.apply(create_month)
-test['day'] = test.Date.apply(create_day)
+convert_species (train,test)
 
 # Add integer latitude/longitude columns
-train['Lat_int'] = train.Latitude.apply(int)
-train['Long_int'] = train.Longitude.apply(int)
-test['Lat_int'] = test.Latitude.apply(int)
-test['Long_int'] = test.Longitude.apply(int)
+train['Lat_int'] = train.Latitude.apply(lambda x: int(x*100))
+train['Long_int'] = train.Longitude.apply(lambda x: int(x*100))
+test['Lat_int'] = test.Latitude.apply(lambda x: int(x*100))
+test['Long_int'] = test.Longitude.apply(lambda x: int(x*100))
 
 # drop address columns
 train = train.drop(['Address', 'AddressNumberAndStreet','WnvPresent', 'NumMosquitos'], axis = 1)
@@ -127,6 +120,8 @@ print 'label dist: ', Counter(labels)
 # sample['WnvPresent'] = predictions
 # sample.to_csv('beat_the_benchmark.csv', index=False)
 
+
+# visualize(train,labels)
 
 # print run_cv(train,labels)
 svm_explain(train,labels)
