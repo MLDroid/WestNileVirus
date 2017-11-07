@@ -1,9 +1,3 @@
-"""
-Beating the Benchmark
-West Nile Virus Prediction @ Kaggle
-__author__ : Abhihsek
-"""
-
 import pandas as pd
 import numpy as np
 from sklearn import ensemble, preprocessing
@@ -16,39 +10,48 @@ from explainable_svm import svm_explain
 from utils import process_date, convert_species
 from vis import visualize
 from pprint import pprint
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
-def run_cv (train,labels,n=5):
-    acc = [];p = [];r = []; f = []
-    for i in xrange(n):
-        X_train, X_test, y_train, y_test = train_test_split(train, labels,test_size=0.3,random_state=randint(0,100))
-        clf = ensemble.RandomForestClassifier(n_jobs=-1, n_estimators=1000, min_samples_split=5)
-        clf.fit(X_train, y_train)
-        y_pred =  clf.predict(X_test)
-        acc.append(accuracy_score(y_test,y_pred))
-        p.append(precision_score(y_test,y_pred))
-        r.append(recall_score(y_test,y_pred))
-        f.append(f1_score(y_test,y_pred))
-        print 'run: ', i+1
-        print classification_report(y_test,y_pred)
+from sklearn.preprocessing import OneHotEncoder
+from keras.utils import np_utils
 
-    acc = np.array(acc)
-    p = np.array(p)
-    r = np.array(r)
-    f = np.array(f)
-    acc_mean = acc.mean()
-    acc_std = acc.std()
-    p_mean = p.mean()
-    p_std = p.std()
-    r_mean = r.mean()
-    r_std = r.std()
-    f_mean = f.mean()
-    f_std = f.std()
-    return acc_mean, acc_std, p_mean, p_std, r_mean, r_std, f_mean, f_std
+from get_feat_importances import get_svm_feat_importances
+
+
+def split_lat_long_locations(lati,longi,num_lati_bins,num_longi_bins):
+    step_size = (max(lati) - min(lati))/num_lati_bins
+    lati_bins = np.arange(min(lati),max(lati),step=step_size).tolist() + [max(lati)+0.01]
+    binned_lati =  [val-1 for val in np.digitize(lati,lati_bins).tolist()]
+
+    step_size = (max(longi) - min(longi)) / num_longi_bins
+    longi_bins = np.arange(min(longi), max(longi), step=step_size).tolist() + [max(longi)+0.01]
+    binned_longi = [val-1 for val in np.digitize(longi, longi_bins).tolist()]
+
+    locations = [lati_bin_num * num_lati_bins + longi_bin_num for lati_bin_num,longi_bin_num in zip(binned_lati,binned_longi)]
+    return locations
+
+def make_categorical_feats(df,feat_name):
+    lbl = preprocessing.LabelEncoder()
+    lbl.fit(list(train[feat_name].values))
+    categorical_feats = np.array(lbl.transform(train[feat_name].values))
+    df[feat_name] = categorical_feats
+
+    categorical_onehot_feats = np_utils.to_categorical(categorical_feats)
+    for dummy_dim in xrange(categorical_onehot_feats.shape[1]):
+        df[feat_name+'_'+str(dummy_dim)] = categorical_onehot_feats[:,dummy_dim].tolist()
+
 
 # Load dataset
-train = pd.read_csv('../input/train.csv')
-sample = pd.read_csv('../input/sampleSubmission.csv')
-weather = pd.read_csv('../input/weather.csv')
+def load_data():
+    train = pd.read_csv('../input/train.csv')
+    weather = pd.read_csv('../input/weather.csv')
+    return train,weather
+
+train,weather = load_data()
+
+categorical_feats = ['Block','Street','Trap','Species']
+feats_to_drop = ['Species', 'Address', 'AddressNumberAndStreet','WnvPresent', 'NumMosquitos',
+                 'Date','Latitude','Longitude','Depth_x','AddressAccuracy'] + categorical_feats
 
 # Get labels
 labels = train.WnvPresent.values
@@ -64,40 +67,50 @@ weather_stn2 = weather_stn2.drop('Station', axis=1)
 weather = weather_stn1.merge(weather_stn2, on='Date')
 
 # replace some missing values and T with -1
-weather = weather.replace('M', -1)
-weather = weather.replace('-', -1)
-weather = weather.replace('T', -1)
-weather = weather.replace(' T', -1)
-weather = weather.replace('  T', -1)
+weather = weather.replace('M', -123)
+weather = weather.replace('-', -123)
+weather = weather.replace('T', -123)
+weather = weather.replace(' T', -123)
+weather = weather.replace('  T', -123)
 
 process_date (train)
-
 convert_species (train)
+
+lati = train['Latitude'].values
+longi = train['Longitude'].values
+bin_sizes = [2,4,6,8,10]
+for lati_bin in bin_sizes:
+    for longi_bin in bin_sizes:
+        locations = split_lat_long_locations(lati,longi,num_lati_bins = lati_bin, num_longi_bins = longi_bin)
+        train['Loc_'+str(lati_bin)+'_'+str(longi_bin)] = locations
+
+#normalize lat/long
+std_scaler = StandardScaler()
+minmax_scaler = MinMaxScaler()
+train['Latitude_std'] = [i[0] for i in std_scaler.fit_transform(np.array(train['Latitude'].values).reshape(-1,1))]
+train['Latitude_minmax'] = [i[0] for i in minmax_scaler.fit_transform(np.array(train['Latitude'].values).reshape(-1,1))]
+
+train['Longitude_std'] = [i[0] for i in std_scaler.fit_transform(np.array(train['Longitude'].values).reshape(-1,1))]
+train['Longitude_minmax'] = [i[0] for i in minmax_scaler.fit_transform(np.array(train['Longitude'].values).reshape(-1,1))]
 
 # Add integer latitude/longitude columns
 train['Lat_int'] = train.Latitude.apply(lambda x: int(x*100))
 train['Long_int'] = train.Longitude.apply(lambda x: int(x*100))
 
-# drop address columns
-train = train.drop(['Address', 'AddressNumberAndStreet','WnvPresent', 'NumMosquitos'], axis = 1)
 
 # Merge with weather data
 train = train.merge(weather, on='Date')
-train = train.drop(['Date'], axis = 1)
+
 
 # Convert categorical data to numbers
-lbl = preprocessing.LabelEncoder()
-lbl.fit(list(train['Species'].values))
-train['Species'] = lbl.transform(train['Species'].values)
+for feat in categorical_feats:
+    make_categorical_feats(df=train, feat_name=feat)
 
-lbl.fit(list(train['Street'].values))
-train['Street'] = lbl.transform(train['Street'].values)
-
-lbl.fit(list(train['Trap'].values))
-train['Trap'] = lbl.transform(train['Trap'].values)
+#drop meaningless features
+train = train.drop(feats_to_drop, axis = 1)
 
 # drop columns with -1s
-train = train.ix[:,(train != -1).any(axis=0)]
+train = train.ix[:,(train != -123).any(axis=0)]
 
 print 'dataset shape: ', train.shape
 print 'label dist: ', Counter(labels)
@@ -115,4 +128,12 @@ print 'label dist: ', Counter(labels)
 # visualize(train,labels)
 
 # print run_cv(train,labels)
-svm_explain(train,labels)
+
+# print train
+# raw_input()
+
+vocab = list(train)
+std_scaler1 = StandardScaler()
+train = std_scaler1.fit_transform(train)
+get_svm_feat_importances (train,labels,vocab)
+svm_explain(train,labels,vocab)
