@@ -15,6 +15,7 @@ from collections import Counter
 from explainable_svm import svm_explain
 from utils import process_date, convert_species
 from vis import visualize
+from pprint import pprint
 
 def run_cv (train,labels,n=5):
     acc = [];p = [];r = []; f = []
@@ -46,7 +47,6 @@ def run_cv (train,labels,n=5):
 
 # Load dataset
 train = pd.read_csv('../input/train.csv')
-test = pd.read_csv('../input/test.csv')
 sample = pd.read_csv('../input/sampleSubmission.csv')
 weather = pd.read_csv('../input/weather.csv')
 
@@ -70,43 +70,34 @@ weather = weather.replace('T', -1)
 weather = weather.replace(' T', -1)
 weather = weather.replace('  T', -1)
 
-process_date (train,test)
+process_date (train)
 
-convert_species (train,test)
+convert_species (train)
 
 # Add integer latitude/longitude columns
 train['Lat_int'] = train.Latitude.apply(lambda x: int(x*100))
 train['Long_int'] = train.Longitude.apply(lambda x: int(x*100))
-test['Lat_int'] = test.Latitude.apply(lambda x: int(x*100))
-test['Long_int'] = test.Longitude.apply(lambda x: int(x*100))
 
 # drop address columns
 train = train.drop(['Address', 'AddressNumberAndStreet','WnvPresent', 'NumMosquitos'], axis = 1)
-test = test.drop(['Id', 'Address', 'AddressNumberAndStreet'], axis = 1)
 
 # Merge with weather data
 train = train.merge(weather, on='Date')
-test = test.merge(weather, on='Date')
 train = train.drop(['Date'], axis = 1)
-test = test.drop(['Date'], axis = 1)
 
 # Convert categorical data to numbers
 lbl = preprocessing.LabelEncoder()
-lbl.fit(list(train['Species'].values) + list(test['Species'].values))
+lbl.fit(list(train['Species'].values))
 train['Species'] = lbl.transform(train['Species'].values)
-test['Species'] = lbl.transform(test['Species'].values)
 
-lbl.fit(list(train['Street'].values) + list(test['Street'].values))
+lbl.fit(list(train['Street'].values))
 train['Street'] = lbl.transform(train['Street'].values)
-test['Street'] = lbl.transform(test['Street'].values)
 
-lbl.fit(list(train['Trap'].values) + list(test['Trap'].values))
+lbl.fit(list(train['Trap'].values))
 train['Trap'] = lbl.transform(train['Trap'].values)
-test['Trap'] = lbl.transform(test['Trap'].values)
 
 # drop columns with -1s
 train = train.ix[:,(train != -1).any(axis=0)]
-test = test.ix[:,(test != -1).any(axis=0)]
 
 print 'dataset shape: ', train.shape
 print 'label dist: ', Counter(labels)
