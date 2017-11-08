@@ -63,7 +63,7 @@ for feat in categorical_feats:
 #drop meaningless features
 train = train.drop(feats_to_drop, axis = 1)
 
-# drop columns with -1s
+# drop samples with MISSING_VAL
 train = train.ix[:,(train != MISSING_VAL).any(axis=0)]
 print 'dataset shape: ', train.shape
 print 'label dist: ', Counter(labels)
@@ -71,11 +71,9 @@ print 'label dist: ', Counter(labels)
 
 # visualize(train,labels)
 
-# print run_cv(train,labels)
 
-# print train
-# raw_input()
 
 vocab = list(train)
 get_svm_feat_importances (train,labels,vocab)
 svm_fit(train,labels,vocab)
+# dt_fit(train,labels,vocab)

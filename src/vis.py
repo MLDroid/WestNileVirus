@@ -33,8 +33,8 @@ def barplot(feat_name, feat_categories, pos_values, neg_values):
 
     plt.tight_layout()
     # plt.show()
-    plt.savefig(feat_name+'.png')
-    print 'check ',feat_name+'.png'
+    plt.savefig('images/'+feat_name+'.png')
+    print 'check ','images/'+feat_name+'.png'
 
 def visualize(train,labels):
     feat_names = list(train)

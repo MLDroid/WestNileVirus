@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier,export_graphviz
 from sklearn.model_selection import train_test_split
 from random import randint
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, roc_auc_score
@@ -44,10 +45,6 @@ def explain_rf(model,vocab):
 
 
 def svm_fit (train,labels,vocab):
-    print 'num of features: ', len(vocab)
-    print 'vocab'
-    pprint (vocab)
-
     acc = []
     p = []
     r = []
@@ -56,9 +53,10 @@ def svm_fit (train,labels,vocab):
 
     for i in xrange(5):
 
-        #step: split dataset into train and test
-        X = train#.as_matrix()
+
+        X = train
         # X = normalize(X)
+        # split dataset into train and test
         X_train, X_test, y_train, y_test = train_test_split(X, labels,test_size=0.3,random_state=randint(0,100))
         # X_train, X_test, y_train, y_test = train_test_split(train, labels,test_size=0.3,random_state=10)
 
@@ -88,6 +86,52 @@ def svm_fit (train,labels,vocab):
         print 'run: ', i + 1
         print classification_report(y_test, y_pred)
         explain_svm(best_model,vocab)
+
+    mean_stds = print_mean_std(acc,p,r,f,auc)
+    return mean_stds
+
+def dt_fit (train,labels,vocab):
+
+    acc = []
+    p = []
+    r = []
+    f = []
+    auc = []
+
+    for i in xrange(5):
+        #step: split dataset into train and test
+        X = train#.as_matrix()
+        # X = normalize(X)
+        X_train, X_test, y_train, y_test = train_test_split(X, labels,test_size=0.3,random_state=randint(0,100))
+        # X_train, X_test, y_train, y_test = train_test_split(train, labels,test_size=0.3,random_state=10)
+
+
+        print 'X and y shapes/dist (before SMOTE): ', X_train.shape, Counter(y_train)
+        # oversample using SMOTE
+        # X_train, y_train = SMOTE(random_state=randint(0,100)).fit_sample(X_train, y_train)
+        # print 'X_train and y_train shapes (after SMOTE): ', X_train.shape, Counter(y_train)
+
+        #perform cv
+
+        params = {'max_features':['auto','log2',None],
+                  'class_weight':[None,'balanced']}
+        clf = GridSearchCV(DecisionTreeClassifier(),params,n_jobs=-1,scoring='roc_auc',cv=3,verbose=2)
+        clf.fit(X_train, y_train)
+        best_model = clf.best_estimator_
+        export_graphviz(best_model,out_file = 'tree'+str(i+1)+'.dot',feature_names=vocab)
+        print 'seleced best model: ', best_model
+
+        #retrain best model
+        best_model.fit(X_train,y_train)
+        y_pred =  best_model.predict(X_test)
+        acc.append(accuracy_score(y_test, y_pred))
+        p.append(precision_score(y_test, y_pred))
+        r.append(recall_score(y_test, y_pred))
+        f.append(f1_score(y_test, y_pred))
+        auc.append(roc_auc_score(y_test, y_pred))
+        print 'run: ', i + 1
+        print classification_report(y_test, y_pred)
+        explain_rf(best_model,vocab)
 
     mean_stds = print_mean_std(acc,p,r,f,auc)
     return mean_stds
