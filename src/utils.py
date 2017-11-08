@@ -1,4 +1,12 @@
 import numpy as np
+import pandas as pd
+
+
+# Load dataset
+def load_data():
+    train = pd.read_csv('../input/train.csv')
+    weather = pd.read_csv('../input/weather.csv')
+    return train,weather
 
 def to_categorical(y, num_classes=None):
     y = np.array(y, dtype='int').ravel()
@@ -9,37 +17,30 @@ def to_categorical(y, num_classes=None):
     categorical[np.arange(n), y] = 1
     return categorical
 
-def process_date(df):
-    '''
-    Extract the year, month and day from the date
-    '''
+def print_mean_std (acc,p,r,f,auc):
+    acc = np.array(acc)
+    p = np.array(p)
+    r = np.array(r)
+    f = np.array(f)
+    auc = np.array(auc)
 
-    # Functions to extract year, month and day from dataset
-    def create_year(x):
-        return int(x.split('-')[0])
+    acc_mean = acc.mean()
+    acc_std = acc.std()
+    p_mean = p.mean()
+    p_std = p.std()
+    r_mean = r.mean()
+    r_std = r.std()
+    f_mean = f.mean()
+    f_std = f.std()
+    auc_mean = auc.mean()
+    auc_std = auc.std()
+    print 'acc:',acc_mean, acc_std
+    print 'p/r/f:',p_mean,p_std,r_mean,r_std,f_mean,f_std
+    print 'auc:',auc_mean,auc_std
+    return acc_mean, acc_std, p_mean, p_std, r_mean, r_std, f_mean, f_std, auc_mean, auc_std
 
-    def create_month(x):
-        return int(x.split('-')[1])
 
-    def create_day(x):
-        return int(x.split('-')[2])
 
-    df['year'] = df.Date.apply(create_year)
-    df['month'] = df.Date.apply(create_month)
-    df['day'] = df.Date.apply(create_day)
-
-def convert_species(df):
-    '''
-    Convert the Species field into 4 attributes: IsPipiens, IsPipiensRestuans (gets 0.5 for Pipiens and for Restuans),
-    IsRestuans, and IsOther (for all other species).
-    '''
-        # % Wnv  / total count in train data
-    df['IsPipiens'] = ((df['Species']=='CULEX PIPIENS'  )*1 + (df['Species']=='CULEX PIPIENS/RESTUANS')*0.5)
-    df['IsPipiensRestuans'] = ((df['Species']=='CULEX PIPIENS/RESTUANS')*1 +    # 5.5%   / 4752
-                               (df['Species']=='CULEX PIPIENS')*0 + (df['Species']=='CULEX RESTUANS'  )*0)
-    df['IsRestuans'] = ((df['Species']=='CULEX RESTUANS'  )*1 +          # 1.8%   / 2740
-                               (df['Species']=='CULEX PIPIENS/RESTUANS')*0.5)
-    df['IsOther'] = (df['Species']!='CULEX PIPIENS') * (df['Species']!='CULEX PIPIENS/RESTUANS') * (df['Species']!='CULEX RESTUANS')
 
 if __name__ == '__main__':
     pass

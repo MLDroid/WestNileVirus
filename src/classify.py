@@ -62,9 +62,10 @@ def svm_fit (train,labels,vocab):
         X_train, X_test, y_train, y_test = train_test_split(X, labels,test_size=0.3,random_state=randint(0,100))
         # X_train, X_test, y_train, y_test = train_test_split(train, labels,test_size=0.3,random_state=10)
 
-        #oversample using SMOTE
+
         print 'X and y shapes/dist (before SMOTE): ', X_train.shape, Counter(y_train)
-        # X_train, y_train = SMOTE(random_state=42).fit_sample(X_train, y_train)
+        # oversample using SMOTE
+        # X_train, y_train = SMOTE(random_state=randint(0,100)).fit_sample(X_train, y_train)
         # print 'X_train and y_train shapes (after SMOTE): ', X_train.shape, Counter(y_train)
 
         #perform cv
@@ -86,10 +87,9 @@ def svm_fit (train,labels,vocab):
         auc.append(roc_auc_score(y_test, y_pred))
         print 'run: ', i + 1
         print classification_report(y_test, y_pred)
-
         explain_svm(best_model,vocab)
 
-    mean_stds = print_mean_std
+    mean_stds = print_mean_std(acc,p,r,f,auc)
     return mean_stds
 
 if __name__ == '__main__':
