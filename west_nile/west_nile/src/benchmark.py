@@ -13,7 +13,7 @@ from pprint import pprint
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 from sklearn.preprocessing import OneHotEncoder
-from keras.utils import np_utils
+from utils import to_categorical
 
 from get_feat_importances import get_svm_feat_importances
 
@@ -36,7 +36,7 @@ def make_categorical_feats(df,feat_name):
     categorical_feats = np.array(lbl.transform(train[feat_name].values))
     df[feat_name] = categorical_feats
 
-    categorical_onehot_feats = np_utils.to_categorical(categorical_feats)
+    categorical_onehot_feats = to_categorical(categorical_feats)
     for dummy_dim in xrange(categorical_onehot_feats.shape[1]):
         df[feat_name+'_'+str(dummy_dim)] = categorical_onehot_feats[:,dummy_dim].tolist()
 
@@ -133,7 +133,7 @@ print 'label dist: ', Counter(labels)
 # raw_input()
 
 vocab = list(train)
-std_scaler1 = StandardScaler()
-train = std_scaler1.fit_transform(train)
+#std_scaler1 = StandardScaler()
+#train = std_scaler1.fit_transform(train)
 get_svm_feat_importances (train,labels,vocab)
 svm_explain(train,labels,vocab)

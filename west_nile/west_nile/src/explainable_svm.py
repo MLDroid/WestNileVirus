@@ -7,11 +7,11 @@ from random import randint
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
 
 from sklearn.model_selection import GridSearchCV
-from sklearn.svm import LinearSVC
+from sklearn.svm import LinearSVC, SVC
 from collections import Counter
 from sklearn.linear_model import LogisticRegression
 from pprint import pprint
-from imblearn.over_sampling import ADASYN, SMOTE, RandomOverSampler
+# from imblearn.over_sampling import ADASYN, SMOTE, RandomOverSampler
 from sklearn.preprocessing import normalize
 
 best_lr = LogisticRegression(C=1000, class_weight='balanced', dual=False,
@@ -24,19 +24,27 @@ best_svm = LinearSVC(C=0.1, class_weight='balanced', dual=False, fit_intercept=T
      multi_class='ovr', penalty='l2', random_state=None, tol=0.0001,
      verbose=0)
 
-def explain(best_model,vocab):
-    w = best_model.coef_[0]
-    wv = sorted(zip(w,vocab))
+best_rf = ensemble.RandomForestClassifier(n_jobs=-1, n_estimators=1000, min_samples_split=5)
+
+def explain_svm(model,vocab):
+    w = model.coef_[0]
+    wv = sorted(zip(w, vocab))
     print 'top feats correlated to neg class (i.e., no WNV)'
-    pprint(wv[:10])
+    pprint(wv[:20])
 
     print 'top feats correlated to pos class (i.e., WNV)'
-    pprint(sorted(wv[-10:],reverse=True))
+    pprint(sorted(wv[-20:], reverse=True))
+
+def explain_rf(model,vocab):
+    w = model.feature_importances_
+    wv = sorted(zip(w, vocab))
+    print 'top feats'
+    pprint(sorted(wv[-40:], reverse=True))
+
 
 
 def svm_explain (train,labels,vocab):
-    print 'X and Y shapes (before SMOTE): ', train.shape, Counter(labels)
-    print 'vocab len: ', len(vocab)
+    print 'num of features: ', len(vocab)
     print 'vocab'
     pprint (vocab)
 
@@ -54,7 +62,7 @@ def svm_explain (train,labels,vocab):
         # X_train, X_test, y_train, y_test = train_test_split(train, labels,test_size=0.3,random_state=10)
 
         #oversample using SMOTE
-        print 'X_train and y_train shapes (before SMOTE): ', X_train.shape, Counter(y_train)
+        print 'X and y shapes/dist (before SMOTE): ', X_train.shape, Counter(y_train)
         # X_train, y_train = SMOTE(random_state=42).fit_sample(X_train, y_train)
         # print 'X_train and y_train shapes (after SMOTE): ', X_train.shape, Counter(y_train)
         # raw_input()
@@ -66,6 +74,7 @@ def svm_explain (train,labels,vocab):
         # clf.fit(X_train, y_train)
         # best_model = clf.best_estimator_
         best_model = best_svm
+        # best_model = best_rf
         print 'seleced best model: ', best_model
 
         #retrain best model
@@ -74,21 +83,21 @@ def svm_explain (train,labels,vocab):
         print accuracy_score(y_test,y_pred)
         print classification_report(y_test,y_pred)
 
-        explain(best_model,vocab)
+        explain_svm(best_model,vocab)
 
-    acc = np.array(acc)
-    p = np.array(p)
-    r = np.array(r)
-    f = np.array(f)
-    acc_mean = acc.mean()
-    acc_std = acc.std()
-    p_mean = p.mean()
-    p_std = p.std()
-    r_mean = r.mean()
-    r_std = r.std()
-    f_mean = f.mean()
-    f_std = f.std()
-    return acc_mean, acc_std, p_mean, p_std, r_mean, r_std, f_mean, f_std
+        # acc = np.array(acc)
+        # p = np.array(p)
+        # r = np.array(r)
+        # f = np.array(f)
+        # acc_mean = acc.mean()
+        # acc_std = acc.std()
+        # p_mean = p.mean()
+        # p_std = p.std()
+        # r_mean = r.mean()
+        # r_std = r.std()
+        # f_mean = f.mean()
+        # f_std = f.std()
+        # return acc_mean, acc_std, p_mean, p_std, r_mean, r_std, f_mean, f_std
 
 if __name__ == '__main__':
     pass
