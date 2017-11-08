@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from random import randint
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, roc_auc_score
 
 from sklearn.model_selection import GridSearchCV
 from sklearn.svm import LinearSVC, SVC
@@ -12,6 +12,7 @@ from sklearn.linear_model import LogisticRegression
 from pprint import pprint
 # from imblearn.over_sampling import ADASYN, SMOTE, RandomOverSampler
 from sklearn.preprocessing import normalize
+from utils import *
 
 best_lr = LogisticRegression(C=1000, class_weight='balanced', dual=False,
       fit_intercept=True, intercept_scaling=1, max_iter=100,
@@ -42,15 +43,16 @@ def explain_rf(model,vocab):
 
 
 
-def svm_explain (train,labels,vocab):
+def svm_fit (train,labels,vocab):
     print 'num of features: ', len(vocab)
     print 'vocab'
     pprint (vocab)
 
-    acc = [];
-    p = [];
-    r = [];
+    acc = []
+    p = []
+    r = []
     f = []
+    auc = []
 
     for i in xrange(5):
 
@@ -64,7 +66,6 @@ def svm_explain (train,labels,vocab):
         print 'X and y shapes/dist (before SMOTE): ', X_train.shape, Counter(y_train)
         # X_train, y_train = SMOTE(random_state=42).fit_sample(X_train, y_train)
         # print 'X_train and y_train shapes (after SMOTE): ', X_train.shape, Counter(y_train)
-        # raw_input()
 
         #perform cv
         # params = {'C':[0.01,0.1,1,10,100]}
@@ -73,39 +74,23 @@ def svm_explain (train,labels,vocab):
         # clf.fit(X_train, y_train)
         # best_model = clf.best_estimator_
         best_model = best_svm
-
-        params = {'min_samples_split':[2,5,10,15,20],
-                  'n_estimators':[10,100,500,1000]}
-        clf = GridSearchCV(RandomForestClassifier(), params, n_jobs=-1, scoring='roc_auc', cv=3,
-                           verbose=2)
-        clf.fit(X_train, y_train)
-        best_model = clf.best_estimator_
         print 'seleced best model: ', best_model
 
         #retrain best model
         best_model.fit(X_train,y_train)
         y_pred =  best_model.predict(X_test)
-        print accuracy_score(y_test,y_pred)
-        print classification_report(y_test,y_pred)
+        acc.append(accuracy_score(y_test, y_pred))
+        p.append(precision_score(y_test, y_pred))
+        r.append(recall_score(y_test, y_pred))
+        f.append(f1_score(y_test, y_pred))
+        auc.append(roc_auc_score(y_test, y_pred))
+        print 'run: ', i + 1
+        print classification_report(y_test, y_pred)
 
-        try:
-            explain_svm(best_model,vocab)
-        except:
-            explain_rf(best_model,vocab)
+        explain_svm(best_model,vocab)
 
-        # acc = np.array(acc)
-        # p = np.array(p)
-        # r = np.array(r)
-        # f = np.array(f)
-        # acc_mean = acc.mean()
-        # acc_std = acc.std()
-        # p_mean = p.mean()
-        # p_std = p.std()
-        # r_mean = r.mean()
-        # r_std = r.std()
-        # f_mean = f.mean()
-        # f_std = f.std()
-        # return acc_mean, acc_std, p_mean, p_std, r_mean, r_std, f_mean, f_std
+    mean_stds = print_mean_std
+    return mean_stds
 
 if __name__ == '__main__':
     pass
