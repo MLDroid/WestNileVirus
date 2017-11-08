@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn import ensemble, preprocessing
-
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from random import randint
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
@@ -24,7 +23,7 @@ best_svm = LinearSVC(C=0.1, class_weight='balanced', dual=False, fit_intercept=T
      multi_class='ovr', penalty='l2', random_state=None, tol=0.0001,
      verbose=0)
 
-best_rf = ensemble.RandomForestClassifier(n_jobs=-1, n_estimators=1000, min_samples_split=5)
+best_rf = RandomForestClassifier(n_jobs=-1, n_estimators=1000, min_samples_split=5)
 
 def explain_svm(model,vocab):
     w = model.coef_[0]
@@ -74,7 +73,13 @@ def svm_explain (train,labels,vocab):
         # clf.fit(X_train, y_train)
         # best_model = clf.best_estimator_
         best_model = best_svm
-        # best_model = best_rf
+
+        params = {'min_samples_split':[2,5,10,15,20],
+                  'n_estimators':[10,100,500,1000]}
+        clf = GridSearchCV(RandomForestClassifier(), params, n_jobs=-1, scoring='roc_auc', cv=3,
+                           verbose=2)
+        clf.fit(X_train, y_train)
+        best_model = clf.best_estimator_
         print 'seleced best model: ', best_model
 
         #retrain best model
@@ -83,7 +88,10 @@ def svm_explain (train,labels,vocab):
         print accuracy_score(y_test,y_pred)
         print classification_report(y_test,y_pred)
 
-        explain_svm(best_model,vocab)
+        try:
+            explain_svm(best_model,vocab)
+        except:
+            explain_rf(best_model,vocab)
 
         # acc = np.array(acc)
         # p = np.array(p)
